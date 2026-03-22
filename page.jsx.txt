@@ -1,0 +1,161 @@
+// FULL STACK READY FRONTEND (Next.js style structure assumed)
+// This is an upgraded UI prepared for backend integration
+
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export default function CarRentalWebsite() {
+  const [cars, setCars] = useState([]);
+  const [selectedCar, setSelectedCar] = useState(null);
+  const [hours, setHours] = useState(1);
+  const [days, setDays] = useState(0);
+  const [user, setUser] = useState(null);
+
+  // Fetch cars from backend
+  useEffect(() => {
+    fetch("http://localhost:5000/api/cars")
+      .then((res) => res.json())
+      .then((data) => setCars(data));
+  }, []);
+
+  const calculatePrice = () => {
+    if (!selectedCar) return 0;
+    return (
+      hours * selectedCar.pricePerHour +
+      days * selectedCar.pricePerDay
+    );
+  };
+
+  const handleBooking = async () => {
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
+
+    const bookingData = {
+      carId: selectedCar._id,
+      hours,
+      days,
+      total: calculatePrice(),
+      userId: user._id,
+    };
+
+    await fetch("http://localhost:5000/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bookingData),
+    });
+
+    alert("Booking Successful ✅");
+  };
+
+  return (
+    <div className="p-4 md:p-8 grid gap-8">
+      <header className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">RentWheeler</h1>
+        <div>
+          {user ? (
+            <span>Welcome {user.name}</span>
+          ) : (
+            <Button onClick={() => alert("Login system coming")}>Login</Button>
+          )}
+        </div>
+      </header>
+
+      {/* Cars */}
+      <section className="grid md:grid-cols-3 gap-6">
+        {cars.map((car) => (
+          <Card key={car._id} className="rounded-2xl shadow-lg">
+            <img src={car.image} className="rounded-t-2xl" />
+            <CardContent className="p-4">
+              <h2 className="text-xl font-semibold">{car.name}</h2>
+              <p>₹{car.pricePerHour}/hr | ₹{car.pricePerDay}/day</p>
+              <Button onClick={() => setSelectedCar(car)} className="mt-2 w-full">
+                Book Now
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      {/* Booking */}
+      {selectedCar && (
+        <section className="max-w-xl mx-auto">
+          <Card className="rounded-2xl shadow-xl">
+            <CardContent className="p-6 grid gap-4">
+              <h2 className="text-2xl font-bold">Book {selectedCar.name}</h2>
+
+              <Input type="number" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" />
+              <Input type="number" value={days} onChange={(e) => setDays(e.target.value)} placeholder="Days" />
+
+              <p className="text-lg font-semibold">Total: ₹{calculatePrice()}</p>
+
+              <Button onClick={handleBooking}>Confirm Booking</Button>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Admin Panel Preview */}
+      <section>
+        <h2 className="text-2xl font-bold">Admin Panel (Demo)</h2>
+        <p className="text-gray-500">Manage cars & bookings from backend dashboard</p>
+      </section>
+    </div>
+  );
+}
+
+
+// ================= BACKEND (Node.js + Express + MongoDB) =================
+
+/*
+
+1. Install:
+npm init -y
+npm install express mongoose cors body-parser
+
+2. server.js
+
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+mongoose.connect('mongodb://127.0.0.1:27017/rentwheeler');
+
+// Models
+const Car = mongoose.model('Car', {
+  name: String,
+  pricePerHour: Number,
+  pricePerDay: Number,
+  image: String
+});
+
+const Booking = mongoose.model('Booking', {
+  carId: String,
+  userId: String,
+  hours: Number,
+  days: Number,
+  total: Number
+});
+
+// Routes
+app.get('/api/cars', async (req, res) => {
+  const cars = await Car.find();
+  res.json(cars);
+});
+
+app.post('/api/bookings', async (req, res) => {
+  const booking = new Booking(req.body);
+  await booking.save();
+  res.json({ success: true });
+});
+
+app.listen(5000, () => console.log('Server running'));
+
+*/
